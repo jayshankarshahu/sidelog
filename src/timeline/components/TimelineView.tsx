@@ -18,11 +18,16 @@ export interface TimelineEntry {
 interface TimelineViewProps {
     entries: TimelineEntry[];
     searchQuery: string;
+    /** Dates whose note card is expanded. */
+    expandedDates: Set<string>;
+    onToggleExpanded: (date: string, expanded: boolean) => void;
 }
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
     entries,
     searchQuery,
+    expandedDates,
+    onToggleExpanded,
 }) => {
     if (entries.length === 0) {
         return (
@@ -77,6 +82,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                     date={entry.date}
                                     note={entry.note}
                                     searchQuery={searchQuery}
+                                    isExpanded={expandedDates.has(entry.date)}
+                                    onToggle={onToggleExpanded}
                                 />
                             )}
                         </div>
