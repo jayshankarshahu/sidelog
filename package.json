@@ -1,12 +1,13 @@
 {
   "name": "sidelog",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:hashtags": "node --experimental-strip-types scripts/check-hashtags.mjs"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",

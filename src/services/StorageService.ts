@@ -29,16 +29,13 @@ async function storageSet(items: Record<string, unknown>): Promise<void> {
     try {
         const storage = getStorage();
         if (!storage) throw new Error('Chrome storage not available');
-        return new Promise(async (resolve, reject) => {
-            await storage.set(items); 
-            if (chrome.runtime.lastError) {
-                saveStateManager.setState('error');
-                reject(new Error(chrome.runtime.lastError.message));
-            } else {
-                saveStateManager.setState('saved');
-                resolve();
-            }
-        });
+        // MV3's promise-form set() rejects on failure (e.g. quota / disk full);
+        // lastError is checked too for older callback-style implementations.
+        await storage.set(items);
+        if (chrome.runtime.lastError) {
+            throw new Error(chrome.runtime.lastError.message);
+        }
+        saveStateManager.setState('saved');
     } catch (err) {
         saveStateManager.setState('error');
         throw err;
@@ -81,6 +78,17 @@ export async function getLastOpenedDate(): Promise<string | null> {
 
 export async function setLastOpenedDate(date: string): Promise<void> {
     await storageSet({ [LAST_OPENED_DATE_KEY]: date });
+}
+
+const HASHTAGS_MIGRATED_KEY = 'hashtags-migrated';
+
+export async function getHashtagsMigrated(): Promise<boolean> {
+    const result = await storageGet(HASHTAGS_MIGRATED_KEY);
+    return result[HASHTAGS_MIGRATED_KEY] === true;
+}
+
+export async function setHashtagsMigrated(): Promise<void> {
+    await storageSet({ [HASHTAGS_MIGRATED_KEY]: true });
 }
 
 // ─── Cache management ───

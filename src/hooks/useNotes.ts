@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { NoteObject, NoteIndex } from '../types';
 import * as NoteService from '../services/NoteService';
 import * as StorageService from '../services/StorageService';
+import { extractHashtags } from '../services/HashtagService';
 import { saveStateManager } from '../state';
 
 interface UseNotesReturn {
@@ -10,16 +11,31 @@ interface UseNotesReturn {
     currentIndex: number;
     totalNotes: number;
     isLoading: boolean;
+    /** Every hashtag used in any note (incl. unsaved edits), most-used first. */
     allTags: string[];
+    /** Number of notes using each tag in `allTags`. */
+    tagCounts: Record<string, number>;
     goToPrev: () => void;
     goToNext: () => void;
     goToDate: (date: string) => Promise<void>;
     saveContent: (markdown: string) => void;
-    addTag: (tag: string) => Promise<void>;
-    removeTag: (tag: string) => Promise<void>;
 }
 
 const DEBOUNCE_MS = 500;
+
+/** Count notes per tag. */
+function countTags(tagsByNote: Map<string, string[]>): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const tags of tagsByNote.values()) {
+        for (const t of tags) counts[t] = (counts[t] || 0) + 1;
+    }
+    return counts;
+}
+
+/** Tags ranked by usage (desc), then alphabetically. */
+function rankTags(counts: Record<string, number>): string[] {
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+}
 
 export function useNotes(): UseNotesReturn {
     const [currentNote, setCurrentNote] = useState<NoteObject | null>(null);
@@ -27,14 +43,28 @@ export function useNotes(): UseNotesReturn {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [sortedIndex, setSortedIndex] = useState<NoteIndex>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [allTags, setAllTags] = useState<string[]>([]);
+    const [tagCounts, setTagCounts] = useState<Record<string, number>>({});
+    const allTags = useMemo(() => rankTags(tagCounts), [tagCounts]);
 
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // noteId → hashtags derived from that note's markdown; source of `allTags`
+    const tagsByNote = useRef(new Map<string, string[]>());
+
+    // Replace one note's tags and recompute counts (keeps identity if unchanged,
+    // so typing without touching hashtags doesn't re-render consumers)
+    const setNoteTags = useCallback((noteId: string, tags: string[]) => {
+        const prevTags = tagsByNote.current.get(noteId) ?? [];
+        tagsByNote.current.set(noteId, tags);
+        if (prevTags.join('\0') === tags.join('\0')) return;
+        setTagCounts(countTags(tagsByNote.current));
+    }, []);
 
     // Initialize — load or create today's note and collect all tags
     useEffect(() => {
         const init = async () => {
             try {
+                // One-time: fold legacy manual tags into note text as #hashtags
+                await NoteService.migrateManualTagsToHashtags();
                 const lastOpenedDate = await StorageService.getLastOpenedDate();
                 const result = lastOpenedDate
                     ? await NoteService.getOrCreateDateNote(lastOpenedDate)
@@ -46,15 +76,12 @@ export function useNotes(): UseNotesReturn {
                 setSortedIndex(result.sortedIndex);
                 await StorageService.setLastOpenedDate(result.note.date);
 
-                // Collect all unique tags across all notes
-                const tagSet = new Set<string>();
+                // Derive hashtags for every note (content is the source of truth)
                 for (const entry of result.sortedIndex) {
                     const note = await StorageService.getNote(entry.noteId);
-                    if (note) {
-                        note.tags.forEach((t) => tagSet.add(t));
-                    }
+                    if (note) tagsByNote.current.set(entry.noteId, extractHashtags(note.noteData));
                 }
-                setAllTags(Array.from(tagSet).sort());
+                setTagCounts(countTags(tagsByNote.current));
             } catch (err) {
                 console.error('Failed to initialize notes:', err);
             } finally {
@@ -102,10 +129,12 @@ export function useNotes(): UseNotesReturn {
         (markdown: string) => {
             if (!currentNoteId) return;
 
-            // Optimistic local update
+            // Optimistic local update; tags follow the text immediately
+            const tags = extractHashtags(markdown);
             setCurrentNote((prev) =>
-                prev ? { ...prev, noteData: markdown, lastEdited: Date.now() } : prev
+                prev ? { ...prev, noteData: markdown, tags, lastEdited: Date.now() } : prev
             );
+            setNoteTags(currentNoteId, tags);
 
             if (debounceTimer.current) {
                 clearTimeout(debounceTimer.current);
@@ -116,7 +145,8 @@ export function useNotes(): UseNotesReturn {
 
             debounceTimer.current = setTimeout(async () => {
                 try {
-                    await NoteService.saveNoteContent(currentNoteId, markdown);
+                    const saved = await NoteService.saveNoteContent(currentNoteId, markdown);
+                    if (saved) setNoteTags(currentNoteId, saved.tags);
                     saveStateManager.setState('saved');
                 } catch (error) {
                     console.error('Failed to save note:', error);
@@ -124,46 +154,7 @@ export function useNotes(): UseNotesReturn {
                 }
             }, DEBOUNCE_MS);
         },
-        [currentNoteId]
-    );
-
-    // Tag operations
-    const addTag = useCallback(
-        async (tag: string) => {
-            if (!currentNoteId) return;
-            saveStateManager.setState('saving');
-            try {
-                const updated = await NoteService.addTag(currentNoteId, tag);
-                if (updated) {
-                    setCurrentNote(updated);
-                    // Update allTags if this is a new tag
-                    setAllTags((prev) =>
-                        prev.includes(tag) ? prev : [...prev, tag].sort()
-                    );
-                }
-                saveStateManager.setState('saved');
-            } catch (error) {
-                console.error('Failed to add tag:', error);
-                saveStateManager.setState('error');
-            }
-        },
-        [currentNoteId]
-    );
-
-    const removeTag = useCallback(
-        async (tag: string) => {
-            if (!currentNoteId) return;
-            saveStateManager.setState('saving');
-            try {
-                const updated = await NoteService.removeTag(currentNoteId, tag);
-                if (updated) setCurrentNote(updated);
-                saveStateManager.setState('saved');
-            } catch (error) {
-                console.error('Failed to remove tag:', error);
-                saveStateManager.setState('error');
-            }
-        },
-        [currentNoteId]
+        [currentNoteId, setNoteTags]
     );
 
     return {
@@ -173,11 +164,10 @@ export function useNotes(): UseNotesReturn {
         totalNotes: sortedIndex.length,
         isLoading,
         allTags,
+        tagCounts,
         goToPrev,
         goToNext,
         goToDate,
         saveContent,
-        addTag,
-        removeTag,
     };
 }

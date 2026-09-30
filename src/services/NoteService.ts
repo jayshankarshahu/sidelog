@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { NoteObject, NoteIndex } from '../types';
 import * as StorageService from './StorageService';
 import { getTodayString } from './DateService';
+import { extractHashtags, normalizeTag } from './HashtagService';
 
 /**
  * NoteService — business logic for note CRUD and navigation.
@@ -114,33 +115,17 @@ export async function getNoteAtIndex(position: number): Promise<{
 }
 
 /**
- * Save markdown content for a note.
+ * Save markdown content for a note. Tags are always re-derived from the
+ * markdown's #hashtags. Returns the stored note (null if it doesn't exist).
  */
-export async function saveNoteContent(noteId: string, markdown: string): Promise<void> {
+export async function saveNoteContent(noteId: string, markdown: string): Promise<NoteObject | null> {
     const note = await StorageService.getNote(noteId);
-    if (!note) return;
+    if (!note) return null;
 
     const updated: NoteObject = {
         ...note,
         noteData: markdown,
-        lastEdited: Date.now(),
-    };
-    await StorageService.setNote(noteId, updated);
-}
-
-/**
- * Add a tag to a note.
- */
-export async function addTag(noteId: string, tag: string): Promise<NoteObject | null> {
-    const note = await StorageService.getNote(noteId);
-    if (!note) return null;
-
-    const trimmed = tag.trim().toLowerCase();
-    if (!trimmed || note.tags.includes(trimmed)) return note;
-
-    const updated: NoteObject = {
-        ...note,
-        tags: [...note.tags, trimmed],
+        tags: extractHashtags(markdown),
         lastEdited: Date.now(),
     };
     await StorageService.setNote(noteId, updated);
@@ -148,17 +133,37 @@ export async function addTag(noteId: string, tag: string): Promise<NoteObject | 
 }
 
 /**
- * Remove a tag from a note.
+ * One-time upgrade from manually-added tags to inline #hashtags.
+ * For each note whose legacy `tags` aren't all present as #hashtags in its text,
+ * appends a trailing line with the missing ones (`\n\n#a #b`), then stores the
+ * derived tags. `lastEdited` is left untouched. Guarded by the `hashtags-migrated`
+ * flag; safe to call from several pages (idempotent).
  */
-export async function removeTag(noteId: string, tag: string): Promise<NoteObject | null> {
-    const note = await StorageService.getNote(noteId);
-    if (!note) return null;
+export async function migrateManualTagsToHashtags(): Promise<void> {
+    if (await StorageService.getHashtagsMigrated()) return;
 
-    const updated: NoteObject = {
-        ...note,
-        tags: note.tags.filter((t) => t !== tag),
-        lastEdited: Date.now(),
-    };
-    await StorageService.setNote(noteId, updated);
-    return updated;
+    const index = await StorageService.getIndex();
+    for (const entry of index) {
+        const note = await StorageService.getNote(entry.noteId);
+        if (!note) continue;
+
+        const present = new Set(extractHashtags(note.noteData));
+        const missing = Array.from(new Set((note.tags ?? []).map(normalizeTag)))
+            .filter((t) => t && !present.has(t));
+
+        let noteData = note.noteData;
+        if (missing.length > 0) {
+            const body = noteData.trimEnd();
+            const line = missing.map((t) => `#${t}`).join(' ');
+            noteData = body ? `${body}\n\n${line}\n` : `${line}\n`;
+        }
+
+        const tags = extractHashtags(noteData);
+        const oldTags = note.tags ?? [];
+        if (noteData === note.noteData && tags.join('\0') === oldTags.join('\0')) continue;
+
+        await StorageService.setNote(entry.noteId, { ...note, noteData, tags });
+    }
+
+    await StorageService.setHashtagsMigrated();
 }

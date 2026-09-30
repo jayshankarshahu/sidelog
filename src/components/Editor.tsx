@@ -8,6 +8,7 @@ import { replaceAll } from '@milkdown/kit/utils';
 import { nord } from '@milkdown/theme-nord';
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from '@milkdown/react';
 import { useSlash } from '../slash';
+import { useHashtag, hashtagHighlight, hashtagSourceRef } from '../hashtag';
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import '@milkdown/theme-nord/style.css';
 import './Editor.css';
@@ -16,6 +17,11 @@ interface EditorProps {
     initialContent: string;
     noteId: string;
     onContentChange: (markdown: string) => void;
+    /** All known hashtags, most-used first — feeds the #suggestion popup. */
+    allTags: string[];
+    /** Notes-per-tag for `allTags`, and this note's tags as counted there. */
+    tagCounts: Record<string, number>;
+    noteTags: string[];
 }
 
 interface EditorCoreProps {
@@ -47,6 +53,7 @@ const EditorCore: React.FC<EditorCoreProps> = ({
 
     const [loading, getEditor] = useInstance();
     const slash = useSlash();
+    const hashtag = useHashtag();
 
     // Upload event listener — decoupled from the node view.
     // Replace the stub inside with your real upload API when ready.
@@ -102,10 +109,13 @@ const EditorCore: React.FC<EditorCoreProps> = ({
                 
             })
             .config(slash.config)
+            .config(hashtag.config)
             .use(commonmark)
             .use(history)
             .use(listener)
             .use(slash.plugin)
+            .use(hashtag.plugin)
+            .use(hashtagHighlight)
     );
 
     /**
@@ -158,8 +168,15 @@ const EditorCore: React.FC<EditorCoreProps> = ({
 export const Editor: React.FC<EditorProps> = ({
     initialContent,
     onContentChange,
+    allTags,
+    tagCounts,
+    noteTags,
 }) => {
     const [isEmpty, setIsEmpty] = useState(!initialContent?.trim());
+
+    // Read by HashtagMenu on each editor update (ref, not prop: plugin views
+    // are created once per editor mount)
+    hashtagSourceRef.current = { allTags, tagCounts, noteTags };
 
     return (
         <div className="editor-wrapper">

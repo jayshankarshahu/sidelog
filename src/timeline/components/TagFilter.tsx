@@ -34,8 +34,9 @@ export const TagFilter: React.FC<TagFilterProps> = ({
                     key={tag}
                     className={`tag-filter__chip ${activeTag === tag ? 'tag-filter__chip--active' : ''}`}
                     onClick={() => onTagClick(activeTag === tag ? null : tag)}
+                    aria-pressed={activeTag === tag}
                 >
-                    {tag}
+                    #{tag}
                     <span className="tag-filter__chip-count">({count})</span>
                 </button>
             ))}

@@ -7,16 +7,17 @@
 - `vite-env.d.ts`: Vite types only. `types/index.ts`: `NoteObject`, `NoteIndex`, `NoteIndexEntry`.
 
 ## App.tsx flow
-`useNotes()` provides current note + navigation + tag ops. Shows spinner until loaded. Renders TopBar (date nav) → Editor (`key={currentNoteId}` forces full remount per note) → optional TagsPanel → BottomBar. Loads theme on mount.
+`useNotes()` provides current note + navigation + `allTags`/`tagCounts` (hashtags across all notes). Shows spinner until loaded. Renders TopBar (date nav) → Editor (`key={currentNoteId}` forces full remount per note) → optional read-only TagsPanel (chip → `openTimelineForTag`) → BottomBar. Loads theme on mount.
 
 ## Subdirectories
 | dir | role |
 |---|---|
 | components/ | editor-page UI |
 | hooks/ | `useNotes`, `useSaveState` |
-| services/ | storage, note CRUD, dates |
+| services/ | storage, note CRUD, dates, hashtags, page navigation |
 | state/ | save-state singleton |
 | slash/ | `/` command menu |
+| hashtag/ | `#tag` suggestions + highlight |
 | timeline/ | timeline page |
 | settings/ | settings page |
 
