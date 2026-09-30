@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Sidelog",
     "description": "A Notion-inspired dark mode note-taking extension with markdown, tags, and timeline view.",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "action": {
         "default_popup": "index.html",
         "default_title": "Sidelog"

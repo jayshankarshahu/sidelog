@@ -1,5 +1,5 @@
 # Sidelog — CLAUDE.md
-Chrome MV3 extension (v2.0.1): Notion-style daily markdown notes in Side Panel or Popup, inline `#hashtags`, timeline, settings. 100% client-side; data lives in `chrome.storage.local`.
+Chrome MV3 extension (v2.1.0): Notion-style daily markdown notes in Side Panel or Popup, inline `#hashtags`, timeline, settings. 100% client-side; data lives in `chrome.storage.local`.
 
 ## Stack
 React 18 + TypeScript (strict, `noUnusedLocals/Parameters`) + Vite 6 · Milkdown 7 (ProseMirror) w/ nord theme · `@prosemirror-adapter/react` · `uuid` · plain per-component CSS (NO Tailwind/CSS frameworks).
