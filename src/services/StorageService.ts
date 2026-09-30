@@ -80,6 +80,17 @@ export async function setLastOpenedDate(date: string): Promise<void> {
     await storageSet({ [LAST_OPENED_DATE_KEY]: date });
 }
 
+const HASHTAGS_MIGRATED_KEY = 'hashtags-migrated';
+
+export async function getHashtagsMigrated(): Promise<boolean> {
+    const result = await storageGet(HASHTAGS_MIGRATED_KEY);
+    return result[HASHTAGS_MIGRATED_KEY] === true;
+}
+
+export async function setHashtagsMigrated(): Promise<void> {
+    await storageSet({ [HASHTAGS_MIGRATED_KEY]: true });
+}
+
 // ─── Cache management ───
 
 export function invalidateCache(): void {
