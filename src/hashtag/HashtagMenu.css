@@ -1,0 +1,63 @@
+/* ─── Hashtag suggestions popup (mirrors slash/SlashMenu.css) ─── */
+
+.hashtag-menu-wrapper {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+  max-width: 240px;
+  overflow: hidden;
+  padding: 4px;
+  font-family: var(--font-family);
+}
+
+.hashtag-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: min(40vh, 220px);
+  overflow-y: auto;
+}
+
+.hashtag-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  transition: background var(--transition-fast);
+}
+
+.hashtag-menu-item--selected {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .hashtag-menu-item--selected {
+  background: var(--bg-hover);
+}
+
+.hashtag-menu-hash {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.hashtag-menu-label {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In-editor #hashtag highlight (decoration from highlight.ts; view-only) */
+.sidelog-hashtag {
+  color: var(--tag-text);
+  background-color: var(--tag-bg);
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
+}
