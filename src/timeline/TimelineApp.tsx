@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { NoteObject, NoteIndexEntry } from '../types';
 import * as StorageService from '../services/StorageService';
 import * as NoteService from '../services/NoteService';
@@ -55,6 +55,18 @@ export const TimelineApp: React.FC = () => {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [activeTag, setActiveTag] = useState<string | null>(readTagParam);
+
+    // Expanded note cards, keyed by date (survives filter changes)
+    const [expandedDates, setExpandedDates] = useState<Set<string>>(() => new Set());
+    const toggleExpanded = useCallback((date: string, expanded: boolean) => {
+        setExpandedDates((prev) => {
+            if (prev.has(date) === expanded) return prev;
+            const next = new Set(prev);
+            if (expanded) next.add(date);
+            else next.delete(date);
+            return next;
+        });
+    }, []);
 
     // Keep `?tag=` in sync so reloads / copied URLs keep the filter
     useEffect(() => {
@@ -228,6 +240,21 @@ export const TimelineApp: React.FC = () => {
         [timelineEntries]
     );
 
+    // Dates of the note cards currently shown (targets of Expand/Collapse all)
+    const visibleNoteDates = useMemo(
+        () => timelineEntries.filter((e) => e.note !== null).map((e) => e.date),
+        [timelineEntries]
+    );
+    const allExpanded = visibleNoteDates.length > 0 && visibleNoteDates.every((d) => expandedDates.has(d));
+    const anyExpanded = visibleNoteDates.some((d) => expandedDates.has(d));
+
+    const expandAll = () => setExpandedDates((prev) => new Set([...prev, ...visibleNoteDates]));
+    const collapseAll = () => setExpandedDates((prev) => {
+        const next = new Set(prev);
+        visibleNoteDates.forEach((d) => next.delete(d));
+        return next;
+    });
+
     const totalNoteCount = useMemo(
         () => notes.filter(({ note }) => hasContent(note)).length,
         [notes]
@@ -275,10 +302,36 @@ export const TimelineApp: React.FC = () => {
                         <span>Loading notes...</span>
                     </div>
                 ) : (
-                    <TimelineView
-                        entries={timelineEntries}
-                        searchQuery={searchQuery}
-                    />
+                    <>
+                        {visibleNoteDates.length > 0 && (
+                            <div className="timeline-app__toolbar">
+                                <button
+                                    type="button"
+                                    className="timeline-app__toolbar-button"
+                                    onClick={expandAll}
+                                    disabled={allExpanded}
+                                >
+                                    <span className="material-symbols-rounded">unfold_more</span>
+                                    Expand all
+                                </button>
+                                <button
+                                    type="button"
+                                    className="timeline-app__toolbar-button"
+                                    onClick={collapseAll}
+                                    disabled={!anyExpanded}
+                                >
+                                    <span className="material-symbols-rounded">unfold_less</span>
+                                    Collapse all
+                                </button>
+                            </div>
+                        )}
+                        <TimelineView
+                            entries={timelineEntries}
+                            searchQuery={searchQuery}
+                            expandedDates={expandedDates}
+                            onToggleExpanded={toggleExpanded}
+                        />
+                    </>
                 )}
             </div>
         </div>

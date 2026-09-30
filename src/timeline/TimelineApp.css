@@ -64,6 +64,55 @@
     padding-bottom: 40px;
 }
 
+/* ─── Expand / Collapse all (aligned with .timeline-view column) ─── */
+
+.timeline-app__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: 1600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px 24px 0;
+}
+
+.timeline-app__toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px 5px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-family);
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.timeline-app__toolbar-button .material-symbols-rounded {
+    font-size: 16px;
+}
+
+.timeline-app__toolbar-button:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--accent);
+    background-color: var(--bg-hover);
+}
+
+.timeline-app__toolbar-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+@media (max-width: 420px) {
+    .timeline-app__toolbar {
+        padding: 12px 14px 0;
+    }
+}
+
 /* ─── Loading ─── */
 
 .timeline-app__loading {

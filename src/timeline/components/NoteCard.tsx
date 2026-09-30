@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import type { NoteObject } from '../../types';
 import { formatDateLabel, formatTimestamp } from '../../services/DateService';
 import './NoteCard.css';
@@ -7,6 +7,9 @@ interface NoteCardProps {
     date: string;
     note: NoteObject | null;
     searchQuery: string;
+    /** Controlled by TimelineApp so "Expand all / Collapse all" can drive it. */
+    isExpanded: boolean;
+    onToggle: (date: string, expanded: boolean) => void;
 }
 
 /** Markdown backslash escapes, e.g. `\#tag` / `\_` emitted by the editor. */
@@ -85,12 +88,11 @@ function renderMarkdown(md: string): string {
         .replace(MD_ESCAPE_RE, '$1');
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-
+export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery, isExpanded, onToggle }) => {
     const preview = useMemo(() => {
         if (!note) return '';
-        return stripMarkdown(note.noteData).slice(0, 200);
+        // Enough text to fill the 3-line preview on a wide card
+        return stripMarkdown(note.noteData).slice(0, 500);
     }, [note]);
 
     const renderedHtml = useMemo(() => {
@@ -113,7 +115,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery }) =
     return (
         <div
             className={`note-card ${isExpanded ? 'note-card--expanded' : ''}`}
-            onClick={() => !isExpanded && setIsExpanded(true)}
+            onClick={() => !isExpanded && onToggle(date, true)}
         >
             <div className="note-card__header">
                 <span className="note-card__date">{formatDateLabel(date)}</span>
@@ -148,7 +150,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery }) =
                     className="note-card__toggle"
                     onClick={(e) => {
                         e.stopPropagation();
-                        setIsExpanded(!isExpanded);
+                        onToggle(date, !isExpanded);
                     }}
                 >
                     <span className="material-symbols-rounded">
