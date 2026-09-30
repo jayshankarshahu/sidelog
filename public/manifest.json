@@ -22,7 +22,8 @@
     },
     "permissions": [
         "storage",
-        "sidePanel"
+        "sidePanel",
+        "unlimitedStorage"
     ],
     "background": {
         "service_worker": "service-worker.js",

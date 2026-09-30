@@ -14,7 +14,7 @@ React 18 + TypeScript (strict, `noUnusedLocals/Parameters`) + Vite 6 · Milkdown
 - `timeline.html` → `src/timeline/`: full-tab timeline/search dashboard
 - `settings.html` → `src/settings/`: full-tab settings (theme, open mode)
 - `src/service-worker.ts`: background worker, emitted as `service-worker.js` (unhashed; manifest references it)
-- `public/manifest.json`: copied verbatim to `dist/`. Permissions: `storage`, `sidePanel`. Shortcut Alt+B (`_execute_action`)
+- `public/manifest.json`: copied verbatim to `dist/`. Permissions: `storage`, `sidePanel`, `unlimitedStorage`. Shortcut Alt+B (`_execute_action`)
 - `docs/`: static GitHub Pages landing site (not part of the build)
 - Vite inputs (vite.config.ts): popup, timeline, settings, service-worker. **New HTML page ⇒ add an input there.**
 
