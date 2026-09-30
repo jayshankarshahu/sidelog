@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { NoteObject, NoteIndexEntry } from '../types';
 import * as StorageService from '../services/StorageService';
+import * as NoteService from '../services/NoteService';
+import { openExtensionPage } from '../services/NavigationService';
 import { SearchBar } from './components/SearchBar';
 import { TagFilter } from './components/TagFilter';
 import { TimelineView, TimelineEntry } from './components/TimelineView';
@@ -38,6 +40,12 @@ function hasContent(note: NoteObject): boolean {
     return note.noteData.trim().length > 0;
 }
 
+/** `?tag=` from the page URL (set by the editor's tag chips), normalized. */
+function readTagParam(): string | null {
+    const tag = new URLSearchParams(window.location.search).get('tag');
+    return tag?.trim().replace(/^#/, '').toLowerCase() || null;
+}
+
 export const TimelineApp: React.FC = () => {
     const [notes, setNotes] = useState<LoadedNote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -46,12 +54,22 @@ export const TimelineApp: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
-    const [activeTag, setActiveTag] = useState<string | null>(null);
+    const [activeTag, setActiveTag] = useState<string | null>(readTagParam);
+
+    // Keep `?tag=` in sync so reloads / copied URLs keep the filter
+    useEffect(() => {
+        const url = new URL(window.location.href);
+        if (activeTag) url.searchParams.set('tag', activeTag);
+        else url.searchParams.delete('tag');
+        if (url.href !== window.location.href) window.history.replaceState(null, '', url.href);
+    }, [activeTag]);
 
     // Load all notes on mount
     useEffect(() => {
         const load = async () => {
             try {
+                // Upgrade legacy manual tags first so stored tags match #hashtags
+                await NoteService.migrateManualTagsToHashtags();
                 const index = await StorageService.getIndex();
                 const loaded: LoadedNote[] = [];
 
@@ -85,7 +103,8 @@ export const TimelineApp: React.FC = () => {
         load();
     }, []);
 
-    // Collect all unique tags with counts
+    // Collect all unique tags across ALL notes with counts. A `?tag=` that no
+    // note uses is still listed (count 0) so it shows as active and can be cleared.
     const tagInfos = useMemo(() => {
         const map = new Map<string, number>();
         for (const { note } of notes) {
@@ -93,10 +112,11 @@ export const TimelineApp: React.FC = () => {
                 map.set(tag, (map.get(tag) || 0) + 1);
             }
         }
+        if (activeTag && !map.has(activeTag)) map.set(activeTag, 0);
         return Array.from(map.entries())
             .map(([tag, count]) => ({ tag, count }))
-            .sort((a, b) => b.count - a.count);
-    }, [notes]);
+            .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+    }, [notes, activeTag]);
 
     // Apply filters
     const filteredNotes = useMemo(() => {
@@ -115,12 +135,16 @@ export const TimelineApp: React.FC = () => {
             result = result.filter(({ entry }) => entry.date <= dateTo);
         }
 
-        // Search filter
+        // Search filter; `#foo` also matches tags starting with `foo`
+        // (stored markdown may hold `\#foo`, so a plain substring can miss it)
         if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
+            const q = searchQuery.trim().toLowerCase();
+            const tagQuery = q.startsWith('#') ? q.slice(1) : null;
             result = result.filter(({ note }) =>
                 note.noteData.toLowerCase().includes(q) ||
-                note.tags.some((t) => t.toLowerCase().includes(q))
+                note.tags.some((t) =>
+                    tagQuery !== null ? t.startsWith(tagQuery) : t.includes(q)
+                )
             );
         }
 
@@ -209,13 +233,6 @@ export const TimelineApp: React.FC = () => {
         [notes]
     );
 
-    const openSettings = () => {
-        const url = typeof chrome !== 'undefined' && chrome.runtime
-            ? chrome.runtime.getURL('settings.html')
-            : '/settings.html';
-        window.open(url, '_blank');
-    };
-
     return (
         <div className="timeline-app">
             <div className="timeline-app__header">
@@ -225,7 +242,7 @@ export const TimelineApp: React.FC = () => {
                 </h1>
                 <button
                     className="timeline-app__settings-button"
-                    onClick={openSettings}
+                    onClick={() => openExtensionPage('settings.html')}
                     title="Settings"
                     aria-label="Settings"
                 >

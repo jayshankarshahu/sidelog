@@ -9,6 +9,9 @@ interface NoteCardProps {
     searchQuery: string;
 }
 
+/** Markdown backslash escapes, e.g. `\#tag` / `\_` emitted by the editor. */
+const MD_ESCAPE_RE = /\\([\\`*_{}[\]()#+\-.!])/g;
+
 /**
  * Strips markdown syntax to get plain text for preview.
  */
@@ -24,6 +27,7 @@ function stripMarkdown(md: string): string {
         .replace(/^>\s+/gm, '')             // blockquotes
         .replace(/---/g, '')                // horizontal rules
         .replace(/\n{2,}/g, '\n')           // collapse newlines
+        .replace(MD_ESCAPE_RE, '$1')        // backslash escapes (e.g. \#tag)
         .trim();
 }
 
@@ -76,7 +80,9 @@ function renderMarkdown(md: string): string {
         // Wrap consecutive <li> in <ul>
         .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
         // Paragraphs (lines not already wrapped)
-        .replace(/^(?!<[hupbola]|<\/|<li|<hr)(.*\S.*)$/gm, '<p>$1</p>');
+        .replace(/^(?!<[hupbola]|<\/|<li|<hr)(.*\S.*)$/gm, '<p>$1</p>')
+        // Backslash escapes (e.g. \#tag) — last, so they can't form syntax above
+        .replace(MD_ESCAPE_RE, '$1');
 }
 
 export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery }) => {
@@ -119,7 +125,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ date, note, searchQuery }) =
             {note.tags.length > 0 && (
                 <div className="note-card__tags">
                     {note.tags.map((tag) => (
-                        <span key={tag} className="note-card__tag">{tag}</span>
+                        <span key={tag} className="note-card__tag">#{tag}</span>
                     ))}
                 </div>
             )}
