@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import './BottomBar.css';
 import { NoteObject } from '../types';
 import { getTodayString } from '../services/DateService';
+import { openExtensionPage } from '../services/NavigationService';
 
 interface BottomBarProps {
     goToDate: (date: string) => Promise<void>,
@@ -18,20 +19,6 @@ export const BottomBar: React.FC<BottomBarProps> = ({
     isTagsOpen,
     onToggleTags,
 }) => {
-    const openTimeline = () => {
-        const url = typeof chrome !== 'undefined' && chrome.runtime
-            ? chrome.runtime.getURL('timeline.html')
-            : '/timeline.html';
-        window.open(url, '_blank');
-    };
-
-    const openSettings = () => {
-        const url = typeof chrome !== 'undefined' && chrome.runtime
-            ? chrome.runtime.getURL('settings.html')
-            : '/settings.html';
-        window.open(url, '_blank');
-    };
-
     const todayDateRef = useRef(getTodayString());
 
     return (
@@ -51,7 +38,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
 
                 <button
                     className="bottom-bar__action"
-                    onClick={openTimeline}
+                    onClick={() => openExtensionPage('timeline.html')}
                     title="Timeline"
                     aria-label="Timeline"
                 >
@@ -60,7 +47,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
 
                 <button
                     className="bottom-bar__action"
-                    onClick={openSettings}
+                    onClick={() => openExtensionPage('settings.html')}
                     title="Settings"
                     aria-label="Settings"
                 >

@@ -5,6 +5,7 @@ import { TopBar } from './components/TopBar';
 import { BottomBar } from './components/BottomBar';
 import { Editor } from './components/Editor';
 import { TagsPanel } from './components/TagsPanel';
+import { openTimelineForTag } from './services/NavigationService';
 import './App.css';
 
 const App: React.FC = () => {
@@ -15,12 +16,11 @@ const App: React.FC = () => {
         totalNotes,
         isLoading,
         allTags,
+        tagCounts,
         goToPrev,
         goToNext,
         goToDate,
         saveContent,
-        addTag,
-        removeTag,
     } = useNotes();
 
     const [isTagsOpen, setIsTagsOpen] = useState(false);
@@ -66,15 +66,16 @@ const App: React.FC = () => {
                         noteId={currentNoteId}
                         initialContent={currentNote.noteData}
                         onContentChange={saveContent}
+                        allTags={allTags}
+                        tagCounts={tagCounts}
+                        noteTags={currentNote.tags}
                     />
                 </div>
 
                 {isTagsOpen && (
                     <TagsPanel
                         tags={currentNote.tags}
-                        allTags={allTags}
-                        onAddTag={addTag}
-                        onRemoveTag={removeTag}
+                        onTagClick={openTimelineForTag}
                     />
                 )}
 
