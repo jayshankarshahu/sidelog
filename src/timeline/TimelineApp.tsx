@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { NoteObject, NoteIndexEntry } from '../types';
 import * as StorageService from '../services/StorageService';
 import * as NoteService from '../services/NoteService';
+import { extractHashtags } from '../services/HashtagService';
 import { openExtensionPage } from '../services/NavigationService';
 import { SearchBar } from './components/SearchBar';
 import { TagFilter } from './components/TagFilter';
@@ -88,7 +89,9 @@ export const TimelineApp: React.FC = () => {
                 for (const entry of index) {
                     const note = await StorageService.getNote(entry.noteId);
                     if (note) {
-                        loaded.push({ entry, note });
+                        // Re-derive tags from the text (cheap) so notes saved under
+                        // older extraction rules are still filtered correctly
+                        loaded.push({ entry, note: { ...note, tags: extractHashtags(note.noteData) } });
                     }
                 }
 

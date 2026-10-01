@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { rmSync } from 'node:fs'
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [
+        react(),
+        // public/ is copied verbatim; keep its dev docs out of the shipped extension
+        {
+            name: 'drop-dev-docs',
+            closeBundle: () => rmSync('dist/CLAUDE.md', { force: true }),
+        },
+    ],
     build: {
         outDir: 'dist',
         rollupOptions: {

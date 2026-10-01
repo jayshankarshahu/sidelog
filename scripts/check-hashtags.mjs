@@ -28,6 +28,8 @@ const cases = [
     ['#project\\_x', ['project_x']],              // serializer escapes _
     ['#über #日本', ['über', '日本']],
     ['line1\n#b\ttext\t#c', ['b', 'c']],
+    ['**#bold** _#em_ ~~#strike~~ [#link](http://x)', ['bold', 'em', 'link', 'strike']],
+    ['a**#no** [x](#anchor) (#paren', []],
     ['#', []],
     ['', []],
 ];

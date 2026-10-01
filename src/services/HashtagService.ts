@@ -11,8 +11,10 @@
 export const TAG_CHAR = '[\\p{L}\\p{N}\\p{M}_-]';
 
 // In stored markdown the serializer escapes some characters: `#` at line start
-// becomes `\#`, and `_` becomes `\_`. Accept both escaped forms.
-const MARKDOWN_HASHTAG_RE = new RegExp(`(^|\\s)\\\\?#((?:${TAG_CHAR}|\\\\[_-])+)`, 'gu');
+// becomes `\#`, and `_` becomes `\_`. Accept both escaped forms. Emphasis /
+// strikethrough / link-text openers (`**#tag**`, `_#tag_`, `~~#tag~~`, `[#tag](…)`)
+// between the whitespace and `#` are allowed: rendered, the `#` follows whitespace.
+const MARKDOWN_HASHTAG_RE = new RegExp(`(^|\\s)[*_~[]*\\\\?#((?:${TAG_CHAR}|\\\\[_-])+)`, 'gu');
 
 // Same rule on plain (already-rendered) text, e.g. ProseMirror text blocks.
 const TEXT_HASHTAG_RE = new RegExp(`(^|\\s)#(${TAG_CHAR}+)`, 'gu');
@@ -33,7 +35,8 @@ function trimTag(raw: string): string {
  * Extract hashtags from a note's markdown. Returns lowercase tags without `#`,
  * deduped and sorted.
  *
- * - `#tag` at start / after whitespace only, so `page#section` is ignored.
+ * - `#tag` at start / after whitespace only, so `page#section` is ignored
+ *   (markdown openers like `**`/`_`/`~~`/`[` may sit in between).
  * - `# Heading` is ignored (a space follows the `#`); so is `## Heading`.
  * - `#` inside fenced or inline code is ignored (code is blanked out first).
  * - Trailing punctuation is dropped: `#tag,` / `#tag.` → `tag`.
