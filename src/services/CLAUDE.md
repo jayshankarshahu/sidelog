@@ -15,7 +15,7 @@ Dependency direction: NoteService → StorageService (+ DateService, HashtagServ
 - `migrateManualTagsToHashtags()`: once (flag `hashtags-migrated`), for each note appends legacy `tags` missing from the text as a trailing `\n\n#a #b` line (via `normalizeTag`: spaces → `-`, invalid chars dropped; tags that normalize to '' are dropped) and stores derived tags. Keeps `lastEdited`. Called by useNotes init and TimelineApp load; idempotent.
 
 ## HashtagService.ts (pure, import-free — loaded by `scripts/check-hashtags.mjs`)
-- `extractHashtags(md)` → sorted, deduped, lowercase tags. Rule: `#` at start or after whitespace + `[\p{L}\p{N}\p{M}_-]+`; trailing `-`/`_` and punctuation dropped. Blanks fenced + inline code first. Accepts serializer escapes `\#tag` (line start) and `\_`.
+- `extractHashtags(md)` → sorted, deduped, lowercase tags. Rule: `#` at start or after whitespace (markdown openers `*`/`_`/`~`/`[` may sit between, e.g. `**#tag**`) + `[\p{L}\p{N}\p{M}_-]+`; trailing `-`/`_` and punctuation dropped. Blanks fenced + inline code first. Accepts serializer escapes `\#tag` (line start) and `\_`.
 - `findHashtagRanges(text)` (plain text offsets, for decorations), `getHashtagQuery(textBefore)` (partial at cursor or null), `hashtagTailLength`, `normalizeTag`, `TAG_CHAR`.
 - Update `scripts/check-hashtags.mjs` cases when changing rules; run `npm run check:hashtags`.
 

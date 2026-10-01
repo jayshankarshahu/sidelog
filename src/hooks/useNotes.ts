@@ -23,6 +23,11 @@ interface UseNotesReturn {
 
 const DEBOUNCE_MS = 500;
 
+/** Tags always come from the text; don't trust a possibly stale stored copy. */
+function withDerivedTags(note: NoteObject): NoteObject {
+    return { ...note, tags: extractHashtags(note.noteData) };
+}
+
 /** Count notes per tag. */
 function countTags(tagsByNote: Map<string, string[]>): Record<string, number> {
     const counts: Record<string, number> = {};
@@ -70,7 +75,7 @@ export function useNotes(): UseNotesReturn {
                     ? await NoteService.getOrCreateDateNote(lastOpenedDate)
                     : await NoteService.getOrCreateTodayNote();
 
-                setCurrentNote(result.note);
+                setCurrentNote(withDerivedTags(result.note));
                 setCurrentNoteId(result.noteId);
                 setCurrentIndex(result.currentIndex);
                 setSortedIndex(result.sortedIndex);
@@ -95,7 +100,7 @@ export function useNotes(): UseNotesReturn {
     const navigateTo = useCallback(async (index: number) => {
         const result = await NoteService.getNoteAtIndex(index);
         if (result) {
-            setCurrentNote(result.note);
+            setCurrentNote(withDerivedTags(result.note));
             setCurrentNoteId(result.noteId);
             setCurrentIndex(index);
             await StorageService.setLastOpenedDate(result.note.date);
@@ -117,7 +122,7 @@ export function useNotes(): UseNotesReturn {
     // Jump to a note by date string (yyyy-mm-dd), creating one if needed
     const goToDate = useCallback(async (date: string) => {
         const result = await NoteService.getOrCreateDateNote(date);
-        setCurrentNote(result.note);
+        setCurrentNote(withDerivedTags(result.note));
         setCurrentNoteId(result.noteId);
         setCurrentIndex(result.currentIndex);
         setSortedIndex(result.sortedIndex);
